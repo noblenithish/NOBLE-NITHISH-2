@@ -1,0 +1,6 @@
+{
+  "name": "JARVIS",
+  "description": "All-in-one AI assistant for Android featuring natural text chat, interactive voice mode, personal assistant tasks & reminders, customizable personality, and cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

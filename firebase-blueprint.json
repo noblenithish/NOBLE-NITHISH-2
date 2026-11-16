@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile stored in Firestore",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name shown in the app"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Profile avatar URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp (FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": ["userId", "displayName", "createdAt", "updatedAt"]
+    },
+    "AssistantPreferences": {
+      "title": "AssistantPreferences",
+      "description": "User-customizable JARVIS personality, voice, AI model, and theme preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "assistantName": { "type": "string" },
+        "preset": {
+          "type": "string",
+          "enum": ["CLASSIC_JARVIS", "EXECUTIVE", "COACH", "CREATIVE"]
+        },
+        "customInstructions": { "type": "string" },
+        "warmth": { "type": "number" },
+        "conciseness": { "type": "number" },
+        "humor": { "type": "number" },
+        "voicePitch": { "type": "number" },
+        "voiceRate": { "type": "number" },
+        "autoSpeakReplies": { "type": "boolean" },
+        "proactiveBriefings": { "type": "boolean" },
+        "aiModel": {
+          "type": "string",
+          "enum": ["gemini-3.8-flash", "gemini-3.5-flash-lite"]
+        },
+        "themeMode": {
+          "type": "string",
+          "enum": ["DARK", "LIGHT", "SYSTEM"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "assistantName",
+        "preset",
+        "customInstructions",
+        "warmth",
+        "conciseness",
+        "humor",
+        "voicePitch",
+        "voiceRate",
+        "autoSpeakReplies",
+        "proactiveBriefings",
+        "aiModel",
+        "themeMode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Conversation thread metadata for chat and voice sessions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "lastMessagePreview": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "messageCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "lastMessagePreview", "isPinned", "messageCount", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual chat or voice message belonging to a conversation",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "sender": {
+          "type": "string",
+          "enum": ["USER", "ASSISTANT"]
+        },
+        "content": { "type": "string" },
+        "actionBadge": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["TEXT", "VOICE"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "conversationId", "sender", "content", "source", "createdAt"]
+    },
+    "AssistantTask": {
+      "title": "AssistantTask",
+      "description": "Personal assistant task item",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "notes": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH"]
+        },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "notes", "category", "priority", "isCompleted", "createdAt", "updatedAt"]
+    },
+    "AssistantReminder": {
+      "title": "AssistantReminder",
+      "description": "Scheduled personal assistant reminder",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "triggerAtMillis": { "type": "integer" },
+        "isDone": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "triggerAtMillis", "isDone", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile document"
+    },
+    "/users/{userId}/preferences/{prefId}": {
+      "schema": { "$ref": "#/entities/AssistantPreferences" },
+      "description": "Private assistant personality, voice, model, and theme settings"
+    },
+    "/users/{userId}/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "User conversation threads"
+    },
+    "/users/{userId}/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages within a conversation thread"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/AssistantTask" },
+      "description": "User personal assistant tasks"
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/AssistantReminder" },
+      "description": "User scheduled reminders"
+    }
+  }
+}

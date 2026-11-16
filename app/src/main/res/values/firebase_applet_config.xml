@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<resources>
+    <string name="firestore_database_id" translatable="false">ai-studio-android-jarvis-559d92b7-d6e6-4ab8-94a7-f99a14b4f132</string>
+    <string name="recaptcha_site_key" translatable="false">6LefbyIuAAAAAKNCfGBCpk02GyGEBP03-7mfq9Ow</string>
+</resources>

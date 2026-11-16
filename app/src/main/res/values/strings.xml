@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">JARVIS</string>
+    <string name="cd_jarvis_avatar">JARVIS AI core emblem</string>
+    <string name="cd_jarvis_hero">JARVIS holographic core artwork</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="auth_title">Welcome to JARVIS</string>
+    <string name="auth_subtitle">Sign in with Google to sync your conversations, tasks, reminders, and custom assistant personality securely across devices.</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_voice">Voice</string>
+    <string name="nav_assistant">Assistant</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Profile</string>
+    <string name="chat_empty_title">Ready when you are</string>
+    <string name="chat_empty_subtitle">Ask anything, brainstorm, or say \"Remind me in 20 minutes to stretch\" or \"Add a high priority task to review notes\".</string>
+    <string name="voice_title">Voice Mode</string>
+    <string name="voice_hands_free">Hands-Free</string>
+    <string name="assistant_title">Personal Assistant</string>
+    <string name="history_title">Chat History</string>
+    <string name="settings_title">Profile &amp; Settings</string>
+    <string name="personality_title">Assistant Personality</string>
+</resources>

@@ -1,0 +1,266 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 200)) &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500));
+    }
+
+    function isValidPreferences(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.assistantName is string &&
+             data.assistantName.size() >= 1 && data.assistantName.size() <= 40 &&
+             data.preset in ['CLASSIC_JARVIS', 'EXECUTIVE', 'COACH', 'CREATIVE'] &&
+             data.customInstructions is string && data.customInstructions.size() <= 1000 &&
+             data.warmth is number && data.warmth >= 0.0 && data.warmth <= 1.0 &&
+             data.conciseness is number && data.conciseness >= 0.0 && data.conciseness <= 1.0 &&
+             data.humor is number && data.humor >= 0.0 && data.humor <= 1.0 &&
+             data.voicePitch is number && data.voicePitch >= 0.5 && data.voicePitch <= 1.5 &&
+             data.voiceRate is number && data.voiceRate >= 0.5 && data.voiceRate <= 1.6 &&
+             data.autoSpeakReplies is bool &&
+             data.proactiveBriefings is bool &&
+             data.aiModel in ['gemini-3.8-flash', 'gemini-3.5-flash-lite'] &&
+             data.themeMode in ['DARK', 'LIGHT', 'SYSTEM'];
+    }
+
+    function isValidConversation(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string &&
+             data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.lastMessagePreview is string && data.lastMessagePreview.size() <= 200 &&
+             data.isPinned is bool &&
+             data.messageCount is int && data.messageCount >= 0;
+    }
+
+    function isValidMessage(data, userId, conversationId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.conversationId is string &&
+             data.conversationId == conversationId &&
+             data.sender in ['USER', 'ASSISTANT'] &&
+             data.content is string &&
+             data.content.size() >= 1 && data.content.size() <= 20000 &&
+             (!('actionBadge' in data) || data.actionBadge == null || (data.actionBadge is string && data.actionBadge.size() <= 120)) &&
+             data.source in ['TEXT', 'VOICE'];
+    }
+
+    function isValidTask(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string &&
+             data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.notes is string && data.notes.size() <= 1000 &&
+             data.category is string &&
+             data.category.size() >= 1 && data.category.size() <= 50 &&
+             data.priority in ['LOW', 'MEDIUM', 'HIGH'] &&
+             data.isCompleted is bool;
+    }
+
+    function isValidReminder(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string &&
+             data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.triggerAtMillis is int && data.triggerAtMillis > 0 &&
+             data.isDone is bool;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'photoUrl', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoUrl', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /preferences/{prefId} {
+        allow get: if isSignedIn() && isValidId(prefId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(prefId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll([
+                           'userId', 'assistantName', 'preset', 'customInstructions',
+                           'warmth', 'conciseness', 'humor', 'voicePitch', 'voiceRate',
+                           'autoSpeakReplies', 'proactiveBriefings', 'aiModel', 'themeMode',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'assistantName', 'preset', 'customInstructions',
+                           'warmth', 'conciseness', 'humor', 'voicePitch', 'voiceRate',
+                           'autoSpeakReplies', 'proactiveBriefings', 'aiModel', 'themeMode',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidPreferences(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(prefId) &&
+                         request.auth.uid == userId &&
+                         isValidPreferences(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'assistantName', 'preset', 'customInstructions',
+                           'warmth', 'conciseness', 'humor', 'voicePitch', 'voiceRate',
+                           'autoSpeakReplies', 'proactiveBriefings', 'aiModel', 'themeMode',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && isValidId(prefId) && request.auth.uid == userId;
+      }
+
+      match /conversations/{conversationId} {
+        allow get: if isSignedIn() && isValidId(conversationId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'title', 'lastMessagePreview', 'isPinned', 'messageCount', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'lastMessagePreview', 'isPinned', 'messageCount', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidConversation(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         request.auth.uid == userId &&
+                         isValidConversation(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'lastMessagePreview', 'messageCount', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['isPinned', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(conversationId) && request.auth.uid == userId;
+
+        match /messages/{messageId} {
+          allow get: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) && request.auth.uid == userId;
+          allow list: if isSignedIn() && isValidId(conversationId) && request.auth.uid == userId;
+
+          allow create: if isSignedIn() &&
+                           isValidId(conversationId) &&
+                           isValidId(messageId) &&
+                           request.auth.uid == userId &&
+                           incoming().keys().hasAll(['userId', 'conversationId', 'sender', 'content', 'source', 'createdAt']) &&
+                           incoming().keys().hasOnly(['userId', 'conversationId', 'sender', 'content', 'actionBadge', 'source', 'createdAt']) &&
+                           incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                           isValidMessage(incoming(), userId, conversationId) &&
+                           existsAfter(/databases/$(database)/documents/users/$(userId)/conversations/$(conversationId));
+
+          allow update: if false;
+
+          allow delete: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) && request.auth.uid == userId;
+        }
+      }
+
+      match /tasks/{taskId} {
+        allow get: if isSignedIn() && isValidId(taskId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(taskId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'title', 'notes', 'category', 'priority', 'isCompleted', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'notes', 'category', 'priority', 'isCompleted', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidTask(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(taskId) &&
+                         request.auth.uid == userId &&
+                         isValidTask(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['isCompleted', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'notes', 'category', 'priority', 'isCompleted', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(taskId) && request.auth.uid == userId;
+      }
+
+      match /reminders/{reminderId} {
+        allow get: if isSignedIn() && isValidId(reminderId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(reminderId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'title', 'triggerAtMillis', 'isDone', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'triggerAtMillis', 'isDone', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidReminder(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(reminderId) &&
+                         request.auth.uid == userId &&
+                         isValidReminder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['isDone', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'triggerAtMillis', 'isDone', 'updatedAt'])
+                         );
+
+        allow delete: if isSignedIn() && isValidId(reminderId) && request.auth.uid == userId;
+      }
+    }
+  }
+}
